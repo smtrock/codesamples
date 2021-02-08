@@ -1,0 +1,113 @@
+version: "3.0"
+services:
+   
+  # Radarr – Movie Download and Management
+  radarr:
+    image: "linuxserver/radarr:develop"
+    hostname: radarr
+    container_name: "radarr"
+    volumes:
+    - ${mdsrv}/docker/radarr:/config
+    - ${mdsrv}/Downloads/completed:/downloads
+    - ${mdsrv}/media/movies:/movies
+    - ${mdsrv}/docker/shared:/shared
+    ports:
+    - "7878:7878"
+    restart: always
+    environment:
+    - PUID=${PUID}
+    - PGID=${PGID}
+    - TZ=${TZ}
+
+  # Sonarr – TV Show Download and Management
+  sonarr:
+    image: "linuxserver/sonarr:preview"
+    hostname: sonarr
+    container_name: "sonarr"
+    volumes:
+    - ${mdsrv}/docker/sonarr:/config
+    - ${mdsrv}/Downloads/completed:/downloads
+    - ${mdsrv}/media/tvshows:/tv
+    - ${mdsrv}/docker/shared:/shared
+    ports:
+    - "8989:8989"
+    restart: always
+    environment:
+    - PUID=${PUID}
+    - PGID=${PGID}
+    - TZ=${TZ}
+  
+  # NZBGet - UseNet setup
+  nzbget:
+    image: linuxserver/nzbget:latest
+    hostname: "nzbget"
+    container_name: "nzbget"
+    ports:
+    - "6789:6789"
+    volumes:
+    - ${mdsrv}/Downloads/:/downloads
+    - ${mdsrv}/docker/nzbget/config:/config
+    restart: always
+    environment: 
+    - PUID=${PUID}
+    - PGID=${PGID}
+    - TZ=${TZ}
+
+  # Plex Media Server
+  plexms:
+    container_name: plexms
+    hostname: plexms
+    restart: always
+    image: plexinc/pms-docker
+    volumes:
+    - ${USERDIR}/docker/plexms:/config
+    - ${USERDIR}/Downloads/plex_tmp:/transcode
+    - ${USERDIR}/media/tvshows:/tv
+    - ${USERDIR}/media/movies:/movies
+    - ${USERDIR}/docker/shared:/shared
+    ports:
+    - "32400:32400/tcp"
+    - "3005:3005/tcp"
+    - "8324:8324/tcp"
+    - "32469:32469/tcp"
+    - "1900:1900/udp"
+    - "32410:32410/udp"
+    - "32412:32412/udp"
+    - "32413:32413/udp"
+    - "32414:32414/udp"
+    environment:
+    - TZ=${TZ}
+    - HOSTNAME="Docker Plex"
+    - PLEX_CLAIM="claim-InsertYourClaimCode"
+    - PLEX_UID=${PUID}
+    - PLEX_GID=${PGID}
+    - ADVERTISE_IP="http://192.168.1.100:32400/"
+
+  # Watchtower - Automatic Update of Containers/Apps
+  
+  watchtower:
+    container_name: watchtower
+    hostname: watchtower
+    restart: always
+    image: v2tec/watchtower:latest
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    command: --schedule "0 0 4 * * *" --cleanup
+  
+  #Portainer - WebUI for Containers
+  portainer:
+    image: portainer/portainer:latest
+    hostname: portainer
+    container_name: portainer
+    restart: always
+    command: -H unix:///var/run/docker.sock
+    ports:
+    - "9000:9000"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ${mdsrv}/docker/portainer/data:/data
+    - ${mdsrv}/docker/shared:/shared
+    environment:
+    - TZ=${TZ}
+
+  

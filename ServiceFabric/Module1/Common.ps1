@@ -100,5 +100,5 @@ function ImportCertificateIntoKeyVault {
     Write-Host ' Imported.'
 }
 function GeneratePassword() {
-    [Microsoft.Web.Security.Membership]::GeneratePassword(15,2)
+    [System.Web.Security.Membership]::GeneratePassword(15,2)
 }

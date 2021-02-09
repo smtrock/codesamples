@@ -2,13 +2,14 @@
 param (
     [Parameter(Mandatory= $true)]
     [string]
-    $Name
+    $Name,
+    [string]
+    $Location
 )
 
 . "$PSScriptRoot\Common.ps1"
 
 $ResourceGroup = "PS-M2-$Name"
-$Location = "East US"
 $KeyVaultName = "$Name-psm2vault"
 CheckLoggedIn
 

@@ -8,8 +8,7 @@ services:
     container_name: "radarr"
     volumes:
     - ${mdsrv}/docker/radarr:/config
-    - ${mdsrv}/Downloads/completed:/downloads
-    - ${mdsrv}/media/movies:/movies
+    - ${mdsrv}/data:/data
     - ${mdsrv}/docker/shared:/shared
     ports:
     - "7878:7878"
@@ -26,8 +25,7 @@ services:
     container_name: "sonarr"
     volumes:
     - ${mdsrv}/docker/sonarr:/config
-    - ${mdsrv}/Downloads/completed:/downloads
-    - ${mdsrv}/media/tvshows:/tv
+    - ${mdsrv}/data/:/data
     - ${mdsrv}/docker/shared:/shared
     ports:
     - "8989:8989"
@@ -45,7 +43,7 @@ services:
     ports:
     - "6789:6789"
     volumes:
-    - ${mdsrv}/Downloads/:/downloads
+    - ${mdsrv}/data/usenet/:/downloads/usenet
     - ${mdsrv}/docker/nzbget/config:/config
     restart: always
     environment: 
@@ -59,12 +57,13 @@ services:
     hostname: plexms
     restart: always
     image: plexinc/pms-docker
+
     volumes:
-    - ${USERDIR}/docker/plexms:/config
-    - ${USERDIR}/Downloads/plex_tmp:/transcode
-    - ${USERDIR}/media/tvshows:/tv
-    - ${USERDIR}/media/movies:/movies
-    - ${USERDIR}/docker/shared:/shared
+    - ${mdsrv}/docker/plexms:/config
+    - ${mdsrv}/data/plex_tmp:/transcode
+    - ${mdsrv}/data/media/tvshows:/tv
+    - ${mdsrv}/data/media/movies:/movies
+    - ${mdsrv}/docker/shared:/shared
     ports:
     - "32400:32400/tcp"
     - "3005:3005/tcp"

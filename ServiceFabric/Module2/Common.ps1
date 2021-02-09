@@ -17,7 +17,7 @@ function EnsureResourceGroup {
         [string]$name, [string]$location
     )
     Write-Host "Checking if resource group '$Name' exists..."
-    $resourceGroup = Get-AzResourceGroup -Name $name -Location $location
+    $resourceGroup = Get-AzResourceGroup -Name $name -Location $location -ErrorAction SilentlyContinue
     if ($null -eq $resourceGroup)
     {
         Write-Host " resource group doesn't exist, creating a new one..."
@@ -51,10 +51,11 @@ function EnsureKeyVault() {
     #>
 
     Write-Host "Checking if key vault '$Name' exists..."
-    $Keyvault = Get-AzKeyVault -VaultName $Name -ErrorAction Ignore
+    $Keyvault = Get-AzKeyVault -VaultName $Name -ErrorAction SilentlyContinue
     if ($null -eq $Keyvault)
     {
         Write-Host " key vault doesn't exist, creating a new one..."
+        New-AzKeyVault -Name $Name -ResourceGroupName $ResourceGroupName -Location $Location -EnabledForDeployment
         Write-Host " key vault created and enabled for deployment."
     }
     else {
@@ -100,5 +101,5 @@ function ImportCertificateIntoKeyVault {
     Write-Host ' Imported.'
 }
 function GeneratePassword() {
-    [Microsoft.Web.Security.Membership]::GeneratePassword(15,2)
+    [System.Web.Security.Membership]::GeneratePassword(15,2)
 }

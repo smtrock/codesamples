@@ -43,7 +43,7 @@ services:
     ports:
     - "6789:6789"
     volumes:
-    - ${mdsrv}/data/usenet/:/downloads/usenet
+    - ${mdsrv}/data/usenet/:/data/usenet
     - ${mdsrv}/docker/nzbget/config:/config
     restart: always
     environment: 
@@ -80,7 +80,7 @@ services:
     - PLEX_CLAIM="claim-InsertYourClaimCode"
     - PLEX_UID=${PUID}
     - PLEX_GID=${PGID}
-    - ADVERTISE_IP="http://192.168.1.100:32400/"
+    - ADVERTISE_IP="http://192.168.86.100:32400/"
 
   # Watchtower - Automatic Update of Containers/Apps
   

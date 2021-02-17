@@ -1,96 +1,263 @@
-version: "3.0"
+version: "3.8"
+# networks:
+#   t1_proxy:
+#     external:
+#       name: t2_proxy
+#   default:
+#     driver: bridge
+
 services:
    
+# Indexers
   # Radarr – Movie Download and Management
   radarr:
-    image: "linuxserver/radarr:develop"
+    image: "hotio/radarr:nightly"
     hostname: radarr
     container_name: "radarr"
     volumes:
-    - ${mdsrv}/docker/radarr:/config
-    - ${mdsrv}/data:/data
-    - ${mdsrv}/docker/shared:/shared
+      - ${docker_dir}/radarr:/config # config files
+      - ${data_dir}/media/movies:/movies # Media location
+      - ${data_dir}/usenet/movies:/data/completed/movies # Usenet download location
     ports:
-    - "7878:7878"
+      - "7878:7878" # Unencrypted
+      - "9899:9899" # Encrypted
     restart: always
     environment:
-    - PUID=${PUID}
-    - PGID=${PGID}
-    - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.ra.rule=Host(`ra.smrtrock.com`)'
+    #     - 'traefik.http.routers.ra.tls=true'
+    #     - 'traefik.http.routers.ra.tls.certresolver=lets-encrypt'
 
   # Sonarr – TV Show Download and Management
   sonarr:
-    image: "linuxserver/sonarr:preview"
+    image: "hotio/sonarr:nightly"
     hostname: sonarr
     container_name: "sonarr"
     volumes:
-    - ${mdsrv}/docker/sonarr:/config
-    - ${mdsrv}/data/:/data
-    - ${mdsrv}/docker/shared:/shared
+      - ${docker_dir}/sonarr:/config # Config files
+      - ${data_dir}/media/tvshows:/tvshows # Media location
+      - ${data_dir}/usenet/tv:/data/tv # Usenet download location
     ports:
-    - "8989:8989"
+      - "8989:8989" # Unencrypted
+      - "9898:9898" # Encrypted
     restart: always
     environment:
-    - PUID=${PUID}
-    - PGID=${PGID}
-    - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.so.rule=Host(`so.smrtrock.com`)'
+    #     - 'traefik.http.routers.so.tls=true'
+    #     - 'traefik.http.routers.so.tls.certresolver=lets-encrypt'
+    
+  # Books DOwnload and Management
+  lazylibrarian:
+    image: linuxserver/lazylibrarian
+    container_name: lazylibrarian
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DOCKER_MODS=linuxserver/calibre-web:calibre|linuxserver/mods:lazylibrarian-ffmpeg #optional
+    volumes:
+      - ${docker_dir}/lazylibrarian:/config # COnfig files
+      - ${data_dir}/media/books:/books # Media location
+      - ${data_dir}/usenet/books:/downloads/usenet # Usenet file location
+      - ${data_dir}/torrent/completed:/downloads/torrent # Torrent file location
+    ports:
+      - 5299:5299
+    restart: always
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.ll.rule=Host(`ll.smrtrock.com`)'
+    #     - 'traefik.http.routers.ll.tls=true'
+    #     - 'traefik.http.routers.ll.tls.certresolver=lets-encrypt'
+
+  # Jackett – Torrent Proxy
+  jackett:
+    image: "linuxserver/jackett:latest"
+    hostname: jackett
+    container_name: "jackett"
+    volumes:
+      - ${docker_dir}/jackett:/config
+      - ${docker_dir}/shared:/shared
+    ports:
+      - "9117:9117" # Unencrypted
+      - "9118:9118" # Encrypted
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.j.rule=Host(`j.smrtrock.com`)'
+    #     - 'traefik.http.routers.j.tls=true'
+    #     - 'traefik.http.routers.j.tls.certresolver=lets-encrypt'
   
+# Download Clients
   # NZBGet - UseNet setup
   nzbget:
-    image: linuxserver/nzbget:latest
+    image: hotio/nzbget:release
     hostname: "nzbget"
     container_name: "nzbget"
     ports:
-    - "6789:6789"
+      - "6789:6789" # Unencrypted
+      - "6791:6791" # ENcrypted
     volumes:
-    - ${mdsrv}/data/usenet/:/data/usenet
-    - ${mdsrv}/docker/nzbget/config:/config
+      - ${data_dir}/usenet:/data
+      - ${docker_dir}/nzbget:/config
     restart: always
     environment: 
-    - PUID=${PUID}
-    - PGID=${PGID}
-    - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.n.rule=Host(`n.smrtrock.com`)'
+    #     - 'traefik.http.routers.my-app.tls=true'
+    #     - 'traefik.http.routers.my-app.tls.certresolver=lets-encrypt'
 
+  # Transmission with VPN – Bittorrent Downloader
+  transmission-vpn:
+    container_name: transmission-vpn
+    hostname: transmission
+    image: haugene/transmission-openvpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    restart: always
+    ports:
+      - "9091:9091"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${docker_dir}/transmission-vpn:/data
+      - ${docker_dir}/shared:/shared
+      - ${data_dir}/torrents:/data/watch
+      - ${data_dir}/torrents/completed:/data/completed
+      - ${data_dir}/torrents/incomplete:/data/incomplete
+    environment:
+      - OPENVPN_PROVIDER=IPVanish
+      - OPENVPN_USERNAME=smrtrock@outlook.com
+      - OPENVPN_PASSWORD=LKFern13!@
+      - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
+      - LOCAL_NETWORK=192.168.86.0/24
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=true
+      - TRANSMISSION_RPC_HOST_WHITELIST="127.0.0.1,192.168.*.*"
+      - TRANSMISSION_RPC_PASSWORD=password
+      - TRANSMISSION_RPC_USERNAME=admin
+      - TRANSMISSION_UMASK=002
+      - TRANSMISSION_RATIO_LIMIT=0.01
+      - TRANSMISSION_RATIO_LIMIT_ENABLED=true
+      - TRANSMISSION_SPEED_LIMIT_UP=30
+      - TRANSMISSION_SPEED_LIMIT_UP_ENABLED=true
+      - TRANSMISSION_INCOMPLETE_DIR=/data/incomplete
+      - TRANSMISSION_INCOMPLETE_DIR_ENABLED=true
+      - TRANSMISSION_WATCH_DIR=/data/watch
+      - TRANSMISSION_WATCH_DIR_ENABLED=true
+      - TRANSMISSION_DOWNLOAD_DIR=/data/completed
+      # # labels:
+      #     - 'traefik.enable=true'
+      #     - 'traefik.http.routers.q.rule=Host(`q.smrtrock.com`)'
+      #     - 'traefik.http.routers.q.tls=true'
+      #     - 'traefik.http.routers.q.tls.certresolver=lets-encrypt'
+
+# Media Servers
   # Plex Media Server
   plexms:
     container_name: plexms
     hostname: plexms
     restart: always
-    image: plexinc/pms-docker
+    image: hotio/plex
 
     volumes:
-    - ${mdsrv}/docker/plexms:/config
-    - ${mdsrv}/data/plex_tmp:/transcode
-    - ${mdsrv}/data/media/tvshows:/tv
-    - ${mdsrv}/data/media/movies:/movies
-    - ${mdsrv}/docker/shared:/shared
+      - ${docker_dir}/plexms:/config
+      - ${data_dir}/plex_tmp:/transcode
+      - ${data_dir}/media/tvshows:/tv
+      - ${data_dir}/media/movies:/movies
+      - ${docker_dir}/shared:/shared
     ports:
-    - "32400:32400/tcp"
-    - "3005:3005/tcp"
-    - "8324:8324/tcp"
-    - "32469:32469/tcp"
-    - "1900:1900/udp"
-    - "32410:32410/udp"
-    - "32412:32412/udp"
-    - "32413:32413/udp"
-    - "32414:32414/udp"
+      - "32400:32400/tcp"
+      - "32401:32401/tcp"
+      - "3005:3005/tcp"
+      - "8324:8324/tcp"
+      - "32469:32469/tcp"
+      - "1900:1900/udp"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
     environment:
-    - TZ=${TZ}
-    - HOSTNAME="Docker Plex"
-    - PLEX_CLAIM="claim-InsertYourClaimCode"
-    - PLEX_UID=${PUID}
-    - PLEX_GID=${PGID}
-    - ADVERTISE_IP="http://192.168.86.100:32400/"
+      - TZ=${TZ}
+      - UMASK=002
+      - HOSTNAME="Docker Plex"
+      - PLEX_CLAIM="PsShgz9aj-V9NjHY3srZ"
+      - PLEX_UID=${PUID}
+      - PLEX_GID=${PGID}
+      - ADVERTISE_IP="http://192.168.86.100:32400/,https://192.168.86.100:32401"
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.p.rule=Host(`p.smrtrock.com`)'
+    #     - 'traefik.http.routers.p.tls=true'
+    #     - 'traefik.http.routers.p.tls.certresolver=lets-encrypt'
 
+  # Calibre  – Ebooks and Management (Server)
+  calibre:
+    image: linuxserver/calibre
+    hostname: calibre
+    container_name: calibre
+    restart: always
+    ports:
+      - "8080:8080" # Desktop GUI
+      - "8081:8081" # Webserver GUI
+    volumes:
+      - ${docker_dir}/calibre:/config:rw
+    #      - /media/ds918/media/books:/config/Calibre Library:rw
+      - ${data_dir}:/data:rw
+      - ${data_dir}/media/books:/books:rw
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      # - GUAC_USER=abc #Gucamole user optional
+      # - GUAC_PASS=900150983cd24fb0d6963f7d28e17f72 #Guacamole password optional
+      - UMASK_SET=002 #optional
+      # - CLI_ARGS= #optional
+    # labels:
+      #   - "traefik.enable=true"
+      #   ## HTTP Routers Auth
+      #   - "traefik.http.routers.calibre-rtr.entrypoints=https"
+      #   - "traefik.http.routers.calibre-rtr.rule=Host(`calibre.$DOMAINNAME`)"
+      #   ## Middlewares
+      #   - "traefik.http.routers.calibre-rtr.middlewares=chain-oauth@file"
+      #   ## HTTP Services
+      #   - "traefik.http.routers.calibre-rtr.service=calibre-svc"
+      #   - "traefik.http.services.calibre-svc.loadbalancer.server.port=8080"
+ 
+# Utilities 
   # Watchtower - Automatic Update of Containers/Apps
-  
   watchtower:
     container_name: watchtower
     hostname: watchtower
     restart: always
     image: v2tec/watchtower:latest
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
     command: --schedule "0 0 4 * * *" --cleanup
   
   #Portainer - WebUI for Containers
@@ -101,12 +268,69 @@ services:
     restart: always
     command: -H unix:///var/run/docker.sock
     ports:
-    - "9000:9000"
+      - "9000:9000"
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ${mdsrv}/docker/portainer/data:/data
-    - ${mdsrv}/docker/shared:/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${docker_dir}/portainer/data:/data
+      - ${docker_dir}/shared:/shared
     environment:
-    - TZ=${TZ}
-
+      - TZ=${TZ}
+    #   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.po.rule=Host(`po.smrtrock.com`)'
+    #     - 'traefik.http.routers.po.tls=true'
+    #     - 'traefik.http.routers.po.tls.certresolver=lets-encrypt'
+      
+  # # Organizer - Unified HTPC/Home Server Web Interface
+  # organizr:
+  #   container_name: organizr
+  #   hostname: organizr
+  #   image: organizr/organizr:latest
+  #   restart: always
+  #   ports:
+  #   - 80:80
+  #   volumes:
+  #   - ${docker_dir}/organizr:/config
+  #   environment:
+  #   - PUID=${PUID}
+  #   - PGID=${PGID}
+  #   - TZ=${TZ}
   
+  # traefik:
+  #   hostname: traefik
+  #   image: traefik:v1.7.16
+  #   container_name: traefik
+  #   restart: always
+  #   domainname: ${DOMAINNAME}
+  #   networks:
+  #     - default
+  #     - t1_proxy
+  #   ports:
+  #     - "80:80" # Web Unencrypted
+  #     - "443:443" # Web Encrypted
+  #     - "8081:8081" # Local Networks
+  #   environment:
+  #     - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
+  #     - CF_API_KEY=${CLOUDFLARE_API_KEY}
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.backend=traefik"
+  #       - "traefik.frontend.rule=Host:traefik.${DOMAINNAME}"  
+  # #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /traefik"
+  #       - "traefik.port=8081"
+  #       - "traefik.docker.network=t2_proxy"
+  #       - "traefik.frontend.headers.SSLRedirect=true"
+  #       - "traefik.frontend.headers.STSSeconds=315360000"
+  #       - "traefik.frontend.headers.browserXSSFilter=true"
+  #       - "traefik.frontend.headers.contentTypeNosniff=true"
+  #       - "traefik.frontend.headers.forceSTSHeader=true"
+  #       - "traefik.frontend.headers.SSLHost=example.com"
+  #       - "traefik.frontend.headers.STSIncludeSubdomains=true"
+  #       - "traefik.frontend.headers.STSPreload=true"
+  # #      - "traefik.frontend.headers.frameDeny: true" #customFrameOptionsValue overrides this
+  #       - "traefik.frontend.headers.customFrameOptionsValue: allow-from https:${DOMAINNAME}"
+  #       - "traefik.frontend.auth.basic.users=${HTTP_USERNAME}:${HTTP_PASSWORD}"
+  #     volumes:
+  #       - /var/run/docker.sock:/var/run/docker.sock:ro
+  #       - ${docker_dir}/traefik:/etc/traefik
+  #       - ${docker_dir}/docker/shared:/shared

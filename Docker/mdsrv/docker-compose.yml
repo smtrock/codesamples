@@ -1,10 +1,12 @@
 version: "3.8"
-# networks:
-#   t1_proxy:
-#     external:
-#       name: t2_proxy
-#   default:
-#     driver: bridge
+
+###################NETWORKS
+networks:
+  t2_proxy:
+    external:
+      name: t2_proxy
+  default:
+    driver: bridge
 
 services:
    
@@ -18,6 +20,7 @@ services:
       - ${docker_dir}/radarr:/config # config files
       - ${data_dir}/media/movies:/movies # Media location
       - ${data_dir}/usenet/movies:/data/completed/movies # Usenet download location
+      - ${data_dir}/torrents/completed:/data/completed/ # torrent download location
     ports:
       - "7878:7878" # Unencrypted
       - "9899:9899" # Encrypted
@@ -42,6 +45,7 @@ services:
       - ${docker_dir}/sonarr:/config # Config files
       - ${data_dir}/media/tvshows:/tvshows # Media location
       - ${data_dir}/usenet/tv:/data/tv # Usenet download location
+      - ${data_dir}/torrents/completed:/data/completed/ # torrents download location
     ports:
       - "8989:8989" # Unencrypted
       - "9898:9898" # Encrypted
@@ -70,7 +74,7 @@ services:
       - ${docker_dir}/lazylibrarian:/config # COnfig files
       - ${data_dir}/media/books:/books # Media location
       - ${data_dir}/usenet/books:/downloads/usenet # Usenet file location
-      - ${data_dir}/torrent/completed:/downloads/torrent # Torrent file location
+      - ${data_dir}/torrents/completed:/downloads/torrents # Torrent file location
     ports:
       - 5299:5299
     restart: always
@@ -281,56 +285,131 @@ services:
     #     - 'traefik.http.routers.po.tls=true'
     #     - 'traefik.http.routers.po.tls.certresolver=lets-encrypt'
       
-  # # Organizer - Unified HTPC/Home Server Web Interface
-  # organizr:
-  #   container_name: organizr
-  #   hostname: organizr
-  #   image: organizr/organizr:latest
-  #   restart: always
-  #   ports:
-  #   - 80:80
-  #   volumes:
-  #   - ${docker_dir}/organizr:/config
-  #   environment:
-  #   - PUID=${PUID}
-  #   - PGID=${PGID}
-  #   - TZ=${TZ}
+  # Organizer - Unified HTPC/Home Server Web Interface
+  organizr:
+    container_name: organizr
+    hostname: organizr
+    image: organizr/organizr:latest
+    restart: always
+    ports:
+    - 80:80
+    volumes:
+    - ${docker_dir}/organizr:/config
+    environment:
+    - PUID=${PUID}
+    - PGID=${PGID}
+    - TZ=${TZ}
+#   labels:
+    #     - 'traefik.enable=true'
+    #     - 'traefik.http.routers.o.rule=Host(`o.smrtrock.com`)'
+    #     - 'traefik.http.routers.o.tls=true'
+    #     - 'traefik.http.routers.o.tls.certresolver=lets-encrypt'
   
+    # Traefik 2 - Reverse Proxy
   # traefik:
-  #   hostname: traefik
-  #   image: traefik:v1.7.16
   #   container_name: traefik
+  #   image: traefik:2.2.1 # the chevrotin tag refers to v2.2.x but introduced a breaking change in 2.2.2
   #   restart: always
-  #   domainname: ${DOMAINNAME}
+  #   command: # CLI arguments
+  #     - --global.checkNewVersion=true
+  #     - --global.sendAnonymousUsage=true
+  #     - --entryPoints.http.address=:80
+  #     - --entryPoints.https.address=:443
+  #       # Allow these IPs to set the X-Forwarded-* headers - Cloudflare IPs: https://www.cloudflare.com/ips/
+  #     - --entrypoints.https.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/12,172.64.0.0/13,131.0.72.0/22
+  #     - --entryPoints.traefik.address=:8080
+  #     - --api=true
+  #     # - --api.insecure=true
+  #     # - --serversTransport.insecureSkipVerify=true
+  #     - --log=true
+  #     - --log.level=DEBUG # (Default: error) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
+  #     - --accessLog=true
+  #     - --accessLog.filePath=/traefik.log
+  #     - --accessLog.bufferingSize=100 # Configuring a buffer of 100 lines
+  #     - --accessLog.filters.statusCodes=400-499
+  #     - --providers.docker=true
+  #     - --providers.docker.endpoint=unix:///var/run/docker.sock
+  #     - --providers.docker.defaultrule=Host(`{{ index .Labels "com.docker.compose.service" }}.${DOMAINNAME}`)
+  #     - --providers.docker.exposedByDefault=false
+  #     - --providers.docker.network=t2_proxy
+  #     - --providers.docker.swarmMode=false
+  #     - --providers.file.directory=/rules # Load dynamic configuration from one or more .toml or .yml files in a directory.
+  #     # - --providers.file.filename=/path/to/file # Load dynamic configuration from a file.
+  #     - --providers.file.watch=true # Only works on top level files in the rules folder
+  #     - --certificatesResolvers.dns-cloudflare.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory # LetsEncrypt Staging Server - uncomment when testing
+  #     - --certificatesResolvers.dns-cloudflare.acme.email=${CLOUDFLARE_EMAIL}
+  #     - --certificatesResolvers.dns-cloudflare.acme.storage=/acme.json
+  #     - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.provider=cloudflare
   #   networks:
-  #     - default
-  #     - t1_proxy
+  #     # t2_proxy:
+  #     #   ipv4_address: 192.168.90.254 # You can specify a static IP
+  #     # networks:
+  #     - t2_proxy
+  #   security_opt:
+  #     - no-new-privileges:true
   #   ports:
-  #     - "80:80" # Web Unencrypted
-  #     - "443:443" # Web Encrypted
-  #     - "8081:8081" # Local Networks
+  #     - target: 80
+  #       published: 80
+  #       protocol: tcp
+  #       mode: host
+  #     - target: 443
+  #       published: 443
+  #       protocol: tcp
+  #       mode: host
+  #     - target: 8080
+  #       published: 8080
+  #       protocol: tcp
+  #       mode: host
+  #   volumes:
+  #     - ${docker_dir}/traefik2/rules:/rules 
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - ${docker_dir}/traefik2/acme/acme.json:/acme.json 
+  #     - ${docker_dir}/traefik2/traefik.log:/traefik.log 
+  #     - ${docker_dir}/shared:/shared
   #   environment:
   #     - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
   #     - CF_API_KEY=${CLOUDFLARE_API_KEY}
   #   labels:
   #     - "traefik.enable=true"
-  #     - "traefik.backend=traefik"
-  #       - "traefik.frontend.rule=Host:traefik.${DOMAINNAME}"  
-  # #      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefixStrip: /traefik"
-  #       - "traefik.port=8081"
-  #       - "traefik.docker.network=t2_proxy"
-  #       - "traefik.frontend.headers.SSLRedirect=true"
-  #       - "traefik.frontend.headers.STSSeconds=315360000"
-  #       - "traefik.frontend.headers.browserXSSFilter=true"
-  #       - "traefik.frontend.headers.contentTypeNosniff=true"
-  #       - "traefik.frontend.headers.forceSTSHeader=true"
-  #       - "traefik.frontend.headers.SSLHost=example.com"
-  #       - "traefik.frontend.headers.STSIncludeSubdomains=true"
-  #       - "traefik.frontend.headers.STSPreload=true"
-  # #      - "traefik.frontend.headers.frameDeny: true" #customFrameOptionsValue overrides this
-  #       - "traefik.frontend.headers.customFrameOptionsValue: allow-from https:${DOMAINNAME}"
-  #       - "traefik.frontend.auth.basic.users=${HTTP_USERNAME}:${HTTP_PASSWORD}"
-  #     volumes:
-  #       - /var/run/docker.sock:/var/run/docker.sock:ro
-  #       - ${docker_dir}/traefik:/etc/traefik
-  #       - ${docker_dir}/docker/shared:/shared
+  #     # HTTP-to-HTTPS Redirect
+  #     - "traefik.http.routers.http-catchall.entrypoints=http"
+  #     - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+  #     - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+  #     - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+  #     # HTTP Routers
+  #     - "traefik.http.routers.traefik-rtr.entrypoints=https"
+  #     - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`)"
+  #     - "traefik.http.routers.traefik-rtr.tls=true"
+  #     - "traefik.http.routers.traefik-rtr.tls.certresolver=dns-cloudflare" # Comment out this line after first run of traefik to force the use of wildcard certs
+  #     - "traefik.http.routers.traefik-rtr.tls.domains[0].main=${DOMAINNAME}"
+  #     - "traefik.http.routers.traefik-rtr.tls.domains[0].sans=*.${DOMAINNAME}"
+  #     # - "traefik.http.routers.traefik-rtr.tls.domains[1].main=$SECONDDOMAINNAME" # Pulls main cert for second domain
+  #     # - "traefik.http.routers.traefik-rtr.tls.domains[1].sans=*.$SECONDDOMAINNAME" # Pulls wildcard cert for second domain
+  #     ## Services - API
+  #     - "traefik.http.routers.traefik-rtr.service=api@internal"
+  #     ## Middlewares
+  #     - "traefik.http.routers.traefik-rtr.middlewares=middlewares-basic-auth@file" 
+
+    # traefik:
+    #   image: "traefik"
+    #   container_name: "traefik"
+    #   command:
+    #     #- "--log.level=DEBUG"
+    #     - "--api.insecure=true"
+    #     - "--providers.docker=true"
+    #     - "--providers.docker.exposedbydefault=false"
+    #     - "--entrypoints.web.address=:80"
+    #   ports:
+    #     - "80:80"
+    #     - "8080:8080"
+    #   volumes:
+    #     - "./letsencrypt:/letsencrypt"
+    #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+    # whoami:
+    #   image: "containous/whoami"
+    #   container_name: "simple-service"
+    #   # labels:
+    #   #   - "traefik.enable=true"
+    #   #   - "traefik.http.routers.whoami.rule=Host(`whoami.${DOMAINNAME}`)"
+    #   #   - "traefik.http.routers.whoami.entrypoints=web"

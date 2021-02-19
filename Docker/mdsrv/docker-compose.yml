@@ -1,15 +1,6 @@
 version: "3.8"
 
-###################NETWORKS
-networks:
-  t2_proxy:
-    external:
-      name: t2_proxy
-  default:
-    driver: bridge
-
 services:
-   
 # Indexers
   # Radarr – Movie Download and Management
   radarr:
@@ -30,11 +21,6 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.ra.rule=Host(`ra.smrtrock.com`)'
-    #     - 'traefik.http.routers.ra.tls=true'
-    #     - 'traefik.http.routers.ra.tls.certresolver=lets-encrypt'
 
   # Sonarr – TV Show Download and Management
   sonarr:
@@ -55,11 +41,6 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.so.rule=Host(`so.smrtrock.com`)'
-    #     - 'traefik.http.routers.so.tls=true'
-    #     - 'traefik.http.routers.so.tls.certresolver=lets-encrypt'
     
   # Books DOwnload and Management
   lazylibrarian:
@@ -78,12 +59,7 @@ services:
     ports:
       - 5299:5299
     restart: always
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.ll.rule=Host(`ll.smrtrock.com`)'
-    #     - 'traefik.http.routers.ll.tls=true'
-    #     - 'traefik.http.routers.ll.tls.certresolver=lets-encrypt'
-
+  
   # Jackett – Torrent Proxy
   jackett:
     image: "linuxserver/jackett:latest"
@@ -100,11 +76,6 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.j.rule=Host(`j.smrtrock.com`)'
-    #     - 'traefik.http.routers.j.tls=true'
-    #     - 'traefik.http.routers.j.tls.certresolver=lets-encrypt'
   
 # Download Clients
   # NZBGet - UseNet setup
@@ -124,11 +95,6 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.n.rule=Host(`n.smrtrock.com`)'
-    #     - 'traefik.http.routers.my-app.tls=true'
-    #     - 'traefik.http.routers.my-app.tls.certresolver=lets-encrypt'
 
   # Transmission with VPN – Bittorrent Downloader
   transmission-vpn:
@@ -175,11 +141,6 @@ services:
       - TRANSMISSION_WATCH_DIR=/data/watch
       - TRANSMISSION_WATCH_DIR_ENABLED=true
       - TRANSMISSION_DOWNLOAD_DIR=/data/completed
-      # # labels:
-      #     - 'traefik.enable=true'
-      #     - 'traefik.http.routers.q.rule=Host(`q.smrtrock.com`)'
-      #     - 'traefik.http.routers.q.tls=true'
-      #     - 'traefik.http.routers.q.tls.certresolver=lets-encrypt'
 
 # Media Servers
   # Plex Media Server
@@ -214,11 +175,6 @@ services:
       - PLEX_UID=${PUID}
       - PLEX_GID=${PGID}
       - ADVERTISE_IP="http://192.168.86.100:32400/,https://192.168.86.100:32401"
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.p.rule=Host(`p.smrtrock.com`)'
-    #     - 'traefik.http.routers.p.tls=true'
-    #     - 'traefik.http.routers.p.tls.certresolver=lets-encrypt'
 
   # Calibre  – Ebooks and Management (Server)
   calibre:
@@ -231,27 +187,13 @@ services:
       - "8081:8081" # Webserver GUI
     volumes:
       - ${docker_dir}/calibre:/config:rw
-    #      - /media/ds918/media/books:/config/Calibre Library:rw
       - ${data_dir}:/data:rw
       - ${data_dir}/media/books:/books:rw
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
-      # - GUAC_USER=abc #Gucamole user optional
-      # - GUAC_PASS=900150983cd24fb0d6963f7d28e17f72 #Guacamole password optional
       - UMASK_SET=002 #optional
-      # - CLI_ARGS= #optional
-    # labels:
-      #   - "traefik.enable=true"
-      #   ## HTTP Routers Auth
-      #   - "traefik.http.routers.calibre-rtr.entrypoints=https"
-      #   - "traefik.http.routers.calibre-rtr.rule=Host(`calibre.$DOMAINNAME`)"
-      #   ## Middlewares
-      #   - "traefik.http.routers.calibre-rtr.middlewares=chain-oauth@file"
-      #   ## HTTP Services
-      #   - "traefik.http.routers.calibre-rtr.service=calibre-svc"
-      #   - "traefik.http.services.calibre-svc.loadbalancer.server.port=8080"
  
 # Utilities 
   # Watchtower - Automatic Update of Containers/Apps
@@ -279,12 +221,7 @@ services:
       - ${docker_dir}/shared:/shared
     environment:
       - TZ=${TZ}
-    #   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.po.rule=Host(`po.smrtrock.com`)'
-    #     - 'traefik.http.routers.po.tls=true'
-    #     - 'traefik.http.routers.po.tls.certresolver=lets-encrypt'
-      
+
   # Organizer - Unified HTPC/Home Server Web Interface
   organizr:
     container_name: organizr
@@ -299,117 +236,3 @@ services:
     - PUID=${PUID}
     - PGID=${PGID}
     - TZ=${TZ}
-#   labels:
-    #     - 'traefik.enable=true'
-    #     - 'traefik.http.routers.o.rule=Host(`o.smrtrock.com`)'
-    #     - 'traefik.http.routers.o.tls=true'
-    #     - 'traefik.http.routers.o.tls.certresolver=lets-encrypt'
-  
-    # Traefik 2 - Reverse Proxy
-  # traefik:
-  #   container_name: traefik
-  #   image: traefik:2.2.1 # the chevrotin tag refers to v2.2.x but introduced a breaking change in 2.2.2
-  #   restart: always
-  #   command: # CLI arguments
-  #     - --global.checkNewVersion=true
-  #     - --global.sendAnonymousUsage=true
-  #     - --entryPoints.http.address=:80
-  #     - --entryPoints.https.address=:443
-  #       # Allow these IPs to set the X-Forwarded-* headers - Cloudflare IPs: https://www.cloudflare.com/ips/
-  #     - --entrypoints.https.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/12,172.64.0.0/13,131.0.72.0/22
-  #     - --entryPoints.traefik.address=:8080
-  #     - --api=true
-  #     # - --api.insecure=true
-  #     # - --serversTransport.insecureSkipVerify=true
-  #     - --log=true
-  #     - --log.level=DEBUG # (Default: error) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
-  #     - --accessLog=true
-  #     - --accessLog.filePath=/traefik.log
-  #     - --accessLog.bufferingSize=100 # Configuring a buffer of 100 lines
-  #     - --accessLog.filters.statusCodes=400-499
-  #     - --providers.docker=true
-  #     - --providers.docker.endpoint=unix:///var/run/docker.sock
-  #     - --providers.docker.defaultrule=Host(`{{ index .Labels "com.docker.compose.service" }}.${DOMAINNAME}`)
-  #     - --providers.docker.exposedByDefault=false
-  #     - --providers.docker.network=t2_proxy
-  #     - --providers.docker.swarmMode=false
-  #     - --providers.file.directory=/rules # Load dynamic configuration from one or more .toml or .yml files in a directory.
-  #     # - --providers.file.filename=/path/to/file # Load dynamic configuration from a file.
-  #     - --providers.file.watch=true # Only works on top level files in the rules folder
-  #     - --certificatesResolvers.dns-cloudflare.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory # LetsEncrypt Staging Server - uncomment when testing
-  #     - --certificatesResolvers.dns-cloudflare.acme.email=${CLOUDFLARE_EMAIL}
-  #     - --certificatesResolvers.dns-cloudflare.acme.storage=/acme.json
-  #     - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.provider=cloudflare
-  #   networks:
-  #     # t2_proxy:
-  #     #   ipv4_address: 192.168.90.254 # You can specify a static IP
-  #     # networks:
-  #     - t2_proxy
-  #   security_opt:
-  #     - no-new-privileges:true
-  #   ports:
-  #     - target: 80
-  #       published: 80
-  #       protocol: tcp
-  #       mode: host
-  #     - target: 443
-  #       published: 443
-  #       protocol: tcp
-  #       mode: host
-  #     - target: 8080
-  #       published: 8080
-  #       protocol: tcp
-  #       mode: host
-  #   volumes:
-  #     - ${docker_dir}/traefik2/rules:/rules 
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - ${docker_dir}/traefik2/acme/acme.json:/acme.json 
-  #     - ${docker_dir}/traefik2/traefik.log:/traefik.log 
-  #     - ${docker_dir}/shared:/shared
-  #   environment:
-  #     - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
-  #     - CF_API_KEY=${CLOUDFLARE_API_KEY}
-  #   labels:
-  #     - "traefik.enable=true"
-  #     # HTTP-to-HTTPS Redirect
-  #     - "traefik.http.routers.http-catchall.entrypoints=http"
-  #     - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
-  #     - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
-  #     - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-  #     # HTTP Routers
-  #     - "traefik.http.routers.traefik-rtr.entrypoints=https"
-  #     - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`)"
-  #     - "traefik.http.routers.traefik-rtr.tls=true"
-  #     - "traefik.http.routers.traefik-rtr.tls.certresolver=dns-cloudflare" # Comment out this line after first run of traefik to force the use of wildcard certs
-  #     - "traefik.http.routers.traefik-rtr.tls.domains[0].main=${DOMAINNAME}"
-  #     - "traefik.http.routers.traefik-rtr.tls.domains[0].sans=*.${DOMAINNAME}"
-  #     # - "traefik.http.routers.traefik-rtr.tls.domains[1].main=$SECONDDOMAINNAME" # Pulls main cert for second domain
-  #     # - "traefik.http.routers.traefik-rtr.tls.domains[1].sans=*.$SECONDDOMAINNAME" # Pulls wildcard cert for second domain
-  #     ## Services - API
-  #     - "traefik.http.routers.traefik-rtr.service=api@internal"
-  #     ## Middlewares
-  #     - "traefik.http.routers.traefik-rtr.middlewares=middlewares-basic-auth@file" 
-
-    # traefik:
-    #   image: "traefik"
-    #   container_name: "traefik"
-    #   command:
-    #     #- "--log.level=DEBUG"
-    #     - "--api.insecure=true"
-    #     - "--providers.docker=true"
-    #     - "--providers.docker.exposedbydefault=false"
-    #     - "--entrypoints.web.address=:80"
-    #   ports:
-    #     - "80:80"
-    #     - "8080:8080"
-    #   volumes:
-    #     - "./letsencrypt:/letsencrypt"
-    #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
-
-    # whoami:
-    #   image: "containous/whoami"
-    #   container_name: "simple-service"
-    #   # labels:
-    #   #   - "traefik.enable=true"
-    #   #   - "traefik.http.routers.whoami.rule=Host(`whoami.${DOMAINNAME}`)"
-    #   #   - "traefik.http.routers.whoami.entrypoints=web"

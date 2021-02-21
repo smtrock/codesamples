@@ -13,14 +13,22 @@ services:
       - ${data_dir}/usenet/movies:/data/completed/movies # Usenet download location
       - ${data_dir}/torrents/completed:/data/completed/ # torrent download location
     ports:
-      - "7878:7878" # Unencrypted
-      - "9899:9899" # Encrypted
+      - target: 7878 # Unencrypted
+        published: ${radarr_port}
+        protocol: tcp
+        mode: host
+      - target: 9899 # Encrypted
+        published: ${radarr_encrypted_port}
+        protocol: tcp
+        mode: host
     restart: always
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.radarr.rule=Host(`${radarr_route}.${domain}`)"
 
   # Sonarr – TV Show Download and Management
   sonarr:
@@ -33,15 +41,23 @@ services:
       - ${data_dir}/usenet/tv:/data/tv # Usenet download location
       - ${data_dir}/torrents/completed:/data/completed/ # torrents download location
     ports:
-      - "8989:8989" # Unencrypted
-      - "9898:9898" # Encrypted
+      - target: 8989 # Unencrypted
+        published: ${sonarr_port}
+        protocol: tcp
+        mode: host
+      - target: 9898 # Encrypted
+        published: ${sonarr_encrypted_port}
+        protocol: tcp
+        mode: host
     restart: always
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    
+    labels: 
+      - "traefik.http.routers.sonarr.rule=Host(`${sonarr_route}.${domain}`)"
+  
   # Books DOwnload and Management
   lazylibrarian:
     image: linuxserver/lazylibrarian
@@ -57,8 +73,13 @@ services:
       - ${data_dir}/usenet/books:/downloads/usenet # Usenet file location
       - ${data_dir}/torrents/completed:/downloads/torrents # Torrent file location
     ports:
-      - 5299:5299
+      - target: 5299
+        published: ${lazylibrarian_port}
+        protocol: tcp
+        mode: host
     restart: always
+    labels: 
+      - "traefik.http.routers.lazylibrarian.rule=Host(`${lazylibrarian_route}.${domain}`)"
   
   # Jackett – Torrent Proxy
   jackett:
@@ -69,23 +90,37 @@ services:
       - ${docker_dir}/jackett:/config
       - ${docker_dir}/shared:/shared
     ports:
-      - "9117:9117" # Unencrypted
-      - "9118:9118" # Encrypted
+      - target: 9117 # Unencrypted
+        published: ${jackett_port}
+        protocol: tcp
+        mode: host
+      - target: 9118 # Encrypted
+        published: ${jackett_encrypted_port}
+        protocol: tcp
+        mode: host
     restart: always
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.jackett.rule=Host(`${jackett_route}.${domain}`)"
   
 # Download Clients
   # NZBGet - UseNet setup
   nzbget:
-    image: hotio/nzbget:release
+    image: linuxserver/nzbget:latest
     hostname: "nzbget"
     container_name: "nzbget"
     ports:
-      - "6789:6789" # Unencrypted
-      - "6791:6791" # ENcrypted
+      - target: 6789 # Unencrypted
+        published: ${nzbget_port}
+        protocol: tcp
+        mode: host
+      - target: 6791 # ENcrypted
+        published: ${nzbget_encrypted_port}
+        protocol: tcp
+        mode: host
     volumes:
       - ${data_dir}/usenet:/data
       - ${docker_dir}/nzbget:/config
@@ -95,6 +130,8 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.nzbget.rule=Host(`${nzbget_route}.${domain}`)"
 
   # Transmission with VPN – Bittorrent Downloader
   transmission-vpn:
@@ -107,7 +144,10 @@ services:
       - /dev/net/tun
     restart: always
     ports:
-      - "9091:9091"
+      - target: 9091
+        published: ${transmission_port}
+        protocol: tcp
+        mode: host
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -141,6 +181,8 @@ services:
       - TRANSMISSION_WATCH_DIR=/data/watch
       - TRANSMISSION_WATCH_DIR_ENABLED=true
       - TRANSMISSION_DOWNLOAD_DIR=/data/completed
+    labels: 
+      - "traefik.http.routers.transmission.rule=Host(`${transmission_route}.${domain}`)"
 
 # Media Servers
   # Plex Media Server
@@ -149,7 +191,6 @@ services:
     hostname: plexms
     restart: always
     image: hotio/plex
-
     volumes:
       - ${docker_dir}/plexms:/config
       - ${data_dir}/plex_tmp:/transcode
@@ -175,6 +216,8 @@ services:
       - PLEX_UID=${PUID}
       - PLEX_GID=${PGID}
       - ADVERTISE_IP="http://192.168.86.100:32400/,https://192.168.86.100:32401"
+    labels: 
+      - "traefik.http.routers.plexms.rule=Host(`${plex_route}.${domain}`)"
 
   # Calibre  – Ebooks and Management (Server)
   calibre:
@@ -183,8 +226,8 @@ services:
     container_name: calibre
     restart: always
     ports:
-      - "8080:8080" # Desktop GUI
-      - "8081:8081" # Webserver GUI
+      - "${calibre_desktop_port}:8080" # Desktop GUI
+      - "${calibre_web_UI_port}:8081" # Webserver GUI
     volumes:
       - ${docker_dir}/calibre:/config:rw
       - ${data_dir}:/data:rw
@@ -194,7 +237,9 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
       - UMASK_SET=002 #optional
- 
+    labels:
+      - "traefik.http.routers.calibre.rule=Host(`calibre_route.${domain}`)"
+
 # Utilities 
   # Watchtower - Automatic Update of Containers/Apps
   watchtower:
@@ -204,7 +249,16 @@ services:
     image: v2tec/watchtower:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --schedule "0 0 4 * * *" --cleanup
+    environment:
+      TZ: ${TZ}
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_REMOVE_VOLUMES: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "true"
+      WATCHTOWER_NO_STARTUP_MESSAGE: "false"
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *" # Everyday at 4 am
+      WATCHTOWER_NOTIFICATIONS_LEVEL: info
+      DOCKER_HOST: tcp://socket-proxy:2375
+      DOCKER_API_VERSION: "1.40"
   
   #Portainer - WebUI for Containers
   portainer:
@@ -214,25 +268,81 @@ services:
     restart: always
     command: -H unix:///var/run/docker.sock
     ports:
-      - "9000:9000"
+      - target: 9000
+        published: ${portainer_port}
+        protocol: tcp
+        mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${docker_dir}/portainer/data:/data
       - ${docker_dir}/shared:/shared
     environment:
       - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.portainer.rule=Host(`${portainers_route}.${domain}`)"
+  
+  heimdall:
+    image: linuxserver/heimdall
+    hostname: heimdall
+    container_name: heimdall
+    restart: always
+    environment: 
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports: 
+      - target: 80
+        published: ${heimdall_port}
+        protocol: tcp
+        mode: host
+      - target: 4443
+        published: ${heimdall_encrypted_port}
+        protocol: tcp
+        mode: host
+    volumes:  
+      - ${docker_dir}/heimdall:/config
+    labels:
+      - "traefik.http.routers.heimdall.rule=Host(`${heimdall_route}.${domain}`)" 
+  
+  reverse-proxy:
+    # The official v2.0 Traefik docker image
+    image: traefik:v2.4
+    container_name: traefik
+    # Enables the web UI and tells Traefik to listen to docker
+    command: --api.insecure=true --providers.docker
+    ports:
+      # The HTTP port
+      - target: 80
+        published: ${traefik_port}
+        protocol: tcp
+        mode: host
+      # The Web UI (enabled by --api.insecure=true)
+      - target: 8080
+        published: ${traefik_webUI_port}
+        protocol: tcp
+        mode: host
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
 
-  # Organizer - Unified HTPC/Home Server Web Interface
+  # # Organizer - Unified HTPC/Home Server Web Interface
   organizr:
     container_name: organizr
     hostname: organizr
     image: organizr/organizr:latest
     restart: always
     ports:
-    - 80:80
+      - target: 80
+        published: ${organizr_port}
+        protocol: tcp
+        mode: host
     volumes:
-    - ${docker_dir}/organizr:/config
+      - ${docker_dir}/organizr:/config
     environment:
-    - PUID=${PUID}
-    - PGID=${PGID}
-    - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.organizr.rule=Host(`${organizr_route}.${domain}`)" 
+
+  

@@ -19,3 +19,5 @@
 **/yarn.lock
 **/package.json
 node_modules
+.DS_Store
+Docker/.DS_Store

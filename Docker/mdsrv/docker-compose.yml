@@ -190,7 +190,7 @@ services:
     container_name: plexms
     hostname: plexms
     restart: always
-    image: hotio/plex
+    image: plexinc/pms-docker
     volumes:
       - ${docker_dir}/plexms:/config
       - ${data_dir}/plex_tmp:/transcode
@@ -212,12 +212,39 @@ services:
       - TZ=${TZ}
       - UMASK=002
       - HOSTNAME="Docker Plex"
-      - PLEX_CLAIM="PsShgz9aj-V9NjHY3srZ"
+      - PLEX_CLAIM=${PLEX_CLAIM}
       - PLEX_UID=${PUID}
       - PLEX_GID=${PGID}
       - ADVERTISE_IP="http://192.168.86.100:32400/,https://192.168.86.100:32401"
     labels: 
       - "traefik.http.routers.plexms.rule=Host(`${plex_route}.${domain}`)"
+
+  emby:
+    image: linuxserver/emby
+    container_name: emby
+    hostname: emby
+    ports: 
+      - target: 8096
+        published: ${emby_port}
+        protocol: tcp
+        mode: host
+      - target: 8920
+        published: ${emby_encrypted_port}
+        protocol: tcp
+        mode: host
+    network_mode: host # Enable DLNA and Wake-on-Lan
+    environment:
+      - UID=${PUID}
+      - GID=${PGID}
+      - GIDList=100
+    volumes: 
+      - ${docker_dir}/emby:/config
+      - ${data_dir}/media/tvshows:/tv
+      - ${data_dir}/media/movies:/movies
+      - ${docker_dir}/shared:/shared
+    restart: always
+    labels:
+      - "traefik.http.routers.emby.rule=Host(`${emby_route}.${domain}`)"
 
   # Calibre  – Ebooks and Management (Server)
   calibre:
@@ -238,7 +265,7 @@ services:
       - TZ=${TZ}
       - UMASK_SET=002 #optional
     labels:
-      - "traefik.http.routers.calibre.rule=Host(`calibre_route.${domain}`)"
+      - "traefik.http.routers.calibre.rule=Host(`${calibre_route}.${domain}`)"
 
 # Utilities 
   # Watchtower - Automatic Update of Containers/Apps
@@ -246,7 +273,7 @@ services:
     container_name: watchtower
     hostname: watchtower
     restart: always
-    image: v2tec/watchtower:latest
+    image: containrrr/watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -256,10 +283,9 @@ services:
       WATCHTOWER_INCLUDE_STOPPED: "true"
       WATCHTOWER_NO_STARTUP_MESSAGE: "false"
       WATCHTOWER_SCHEDULE: "0 0 4 * * *" # Everyday at 4 am
-      WATCHTOWER_NOTIFICATIONS_LEVEL: info
-      DOCKER_HOST: tcp://socket-proxy:2375
-      DOCKER_API_VERSION: "1.40"
-  
+      WATCHTOWER_NOTIFICATIONS_LEVEL: debug
+      # DOCKER_HOST: tcp://socket-proxy:2375
+    
   #Portainer - WebUI for Containers
   portainer:
     image: portainer/portainer:latest
@@ -309,7 +335,23 @@ services:
     image: traefik:v2.4
     container_name: traefik
     # Enables the web UI and tells Traefik to listen to docker
-    command: --api.insecure=true --providers.docker
+    command: 
+      - --accessLog=true
+      - --accessLog.filePath=/traefik.log
+      - --accessLog.bufferingSize=100
+      - --accessLog.filters.statusCodes=400-499
+      - --api=true
+      - --api.dashboard=true
+      - --api.insecure=true 
+      #- --configFile=${docker_dir}/traefik2/traefik.toml
+      - --global.checkNewVersion=true
+      - --global.sendAnonymousUsage=true
+      - --entryPoints.http.address=:80
+      - --entryPoints.https.address=:443
+      - --log=true
+      - --log.level=ERROR # (Default: error) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
+      - --providers.docker
+     # - --providers.docker.endpoints=tcp://socket-proxy:2375  
     ports:
       # The HTTP port
       - target: 80
@@ -324,25 +366,5 @@ services:
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
-
-  # # Organizer - Unified HTPC/Home Server Web Interface
-  organizr:
-    container_name: organizr
-    hostname: organizr
-    image: organizr/organizr:latest
-    restart: always
-    ports:
-      - target: 80
-        published: ${organizr_port}
-        protocol: tcp
-        mode: host
-    volumes:
-      - ${docker_dir}/organizr:/config
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    labels: 
-      - "traefik.http.routers.organizr.rule=Host(`${organizr_route}.${domain}`)" 
-
-  
+      - ${docker_dir}/traefik2/traefik.log:/traefik.log
+      - ${docker_dir}/shared:/shared

@@ -106,6 +106,27 @@ services:
     labels: 
       - "traefik.http.routers.jackett.rule=Host(`${jackett_route}.${domain}`)"
   
+  # NZBHydra - NZB Meta Search
+  hydra:
+    image: linuxserver/hydra
+    container_name: hydra
+    volumes: 
+      - ${docker_dir}/hydra:/config
+      - ${data_dir}/usenet:/downloads 
+      - ${docker_dir}/shared:/shared
+    ports:
+      - target: 5075
+        published: ${nzbhydra_port}
+        protocol: tcp
+        mode: host
+    restart: always
+    environment: 
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    labels:
+      - "traefik.http.routers.hydra.rule=Host(`${hydra_route}.${domain}`)"
+      
 # Download Clients
   # NZBGet - UseNet setup
   nzbget:

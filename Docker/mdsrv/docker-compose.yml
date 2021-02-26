@@ -116,7 +116,7 @@ services:
       - ${docker_dir}/shared:/shared
     ports:
       - target: 5075
-        published: ${nzbhydra_port}
+        published: ${hydra_port}
         protocol: tcp
         mode: host
     restart: always

@@ -1,0 +1,378 @@
+version: "3.8"
+
+networks:
+  t2_proxy:
+    external:
+      name: t2_proxy
+  default:
+    driver: bridge
+
+services:
+# Indexers
+  # Radarr – Movie Download and Management
+  radarr:
+    image: "hotio/radarr:nightly"
+    hostname: radarr
+    container_name: "radarr"
+    volumes:
+      - ${docker_dir}/radarr:/config # config files
+      - ${data_dir}/media/movies:/movies # Media location
+      # - /Volumes/Movies/Movies:/movies2 # additional Movies location
+      - ${data_dir}/usenet/movies:/data/completed/movies # Usenet download location
+      - ${data_dir}/torrents/completed:/data/completed/ # torrent download location
+    ports:
+      - target: 7878 # Unencrypted
+        published: ${radarr_port}
+        protocol: tcp
+        mode: host
+      - target: 9899 # Encrypted
+        published: ${radarr_encrypted_port}
+        protocol: tcp
+        mode: host
+    restart: always
+    networks:
+      - t2_proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    labels: 
+      #- "traefik.http.routers.radarr.rule=Host(`${DOMAINNAME}`) && Path(`/${radarr_route}`)" 
+      - "traefik.http.routers.radarr.rule=Host(`${radarr_route}.${domain}`)"
+      - "traefik.enable=true"
+      # - "traefik.http.routers.radar.tls.certresolver=dns-cloudflare"
+      # - "traefik.http.routers.radarr.entrypoints=web"
+  
+  # Sonarr – TV Show Download and Management
+  sonarr:
+    image: "hotio/sonarr:nightly"
+    hostname: sonarr
+    container_name: "sonarr"
+    volumes:
+      - ${docker_dir}/sonarr:/config # Config files
+      - ${data_dir}/media/tvshows:/tvshows # Media location
+      - ${data_dir}/usenet/tvshows:/data/tvshows # Usenet download location
+      - ${data_dir}/torrents/completed:/data/completed/tvshows # torrents download location
+    ports:
+      - target: 8989 # Unencrypted
+        published: ${sonarr_port}
+        protocol: tcp
+        mode: host
+      - target: 9898 # Encrypted
+        published: ${sonarr_encrypted_port}
+        protocol: tcp
+        mode: host
+    restart: always
+    networks:
+      - t2_proxy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.sonarr.rule=Host(`${sonarr_route}.${domain}`)"
+      - "traefik.enable=true"
+  
+  # Books DOwnload and Management
+  lazylibrarian:
+    image: linuxserver/lazylibrarian
+    container_name: lazylibrarian
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DOCKER_MODS=linuxserver/calibre-web:calibre|linuxserver/mods:lazylibrarian-ffmpeg #optional
+    volumes:
+      - ${docker_dir}/lazylibrarian:/config # COnfig files
+      - ${data_dir}/media/books:/books # Media location
+      - ${data_dir}/usenet/books:/downloads/usenet # Usenet file location
+      - ${data_dir}/torrents/completed:/downloads/torrents # Torrent file location
+    ports:
+      - target: 5299
+        published: ${lazylibrarian_port}
+        protocol: tcp
+        mode: host
+    restart: always
+    labels: 
+      - "traefik.http.routers.lazylibrarian.rule=Host(`${lazylibrarian_route}.${domain}`)"
+      - "traefik.enable=true"
+
+  # Jackett – Torrent Proxy
+  jackett:
+    image: "linuxserver/jackett:latest"
+    hostname: jackett
+    container_name: "jackett"
+    volumes:
+      - ${docker_dir}/jackett:/config
+      - ${docker_dir}/shared:/shared
+    ports:
+      - target: 9117 # Unencrypted
+        published: ${jackett_port}
+        protocol: tcp
+        mode: host
+      - target: 9118 # Encrypted
+        published: ${jackett_encrypted_port}
+        protocol: tcp
+        mode: host
+    restart: always
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.jackett.rule=Host(`${jackett_route}.${domain}`)"
+      - "traefik.enable=true"
+
+  # NZBHydra - NZB Meta Search
+  hydra:
+    image: linuxserver/nzbhydra2:latest
+    container_name: hydra
+    volumes: 
+      - ${docker_dir}/hydra:/config
+      - ${data_dir}/usenet:/downloads 
+      - ${docker_dir}/shared:/shared
+    networks:
+      - t2_proxy
+    ports:
+      - target: 5075
+        published: ${nzbhydra_port}
+        protocol: tcp
+        mode: host
+      - target: 5076
+        published: ${nzbhydra_encrypted_port}
+    restart: always
+    environment: 
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    labels:
+      - "traefik.http.routers.hydra.rule=Host(`${hydra_route}.${domain}`)"
+      - "traefik.enable=true"
+
+# Download Clients
+  # NZBGet - UseNet setup
+  nzbget:
+    image: linuxserver/nzbget:latest
+    hostname: "nzbget"
+    container_name: "nzbget"
+    ports:
+      - target: 6789 # Unencrypted
+        published: ${nzbget_port}
+        protocol: tcp
+        mode: host
+      - target: 6791 # ENcrypted
+        published: ${nzbget_encrypted_port}
+        protocol: tcp
+        mode: host
+    volumes:
+      - ${data_dir}/usenet:/data
+      - ${docker_dir}/nzbget:/config
+    restart: always
+    networks:
+      - t2_proxy
+    environment: 
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - UMASK=002
+      - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.nzbget.rule=Host(`${nzbget_route}.${domain}`)"
+      - "traefik.enable=true"
+
+# Media Servers
+  jellyfin:
+    image: ghcr.io/linuxserver/jellyfin
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${docker_dir}/jellyfin:/config
+      - ${data_dir}/media/tvshows:/data/tvshows
+      - ${data_dir}/media/movies:/data/movies
+    ports:
+      - target: 8096
+        published: ${jellyfin_port}
+        protocol: tcp
+        mode: host
+    restart: always
+    networks:
+      - t2_proxy
+    labels: 
+      - "traefik.http.routers.jellyfin.rule=Host(`${jellyfin_route}.${domain}`)"
+      - "traefik.enable=true"
+
+  # Calibre  – Ebooks and Management (Server)
+  calibre:
+    image: linuxserver/calibre
+    hostname: calibre
+    container_name: calibre
+    restart: always
+    ports:
+      - "${calibre_desktop_port}:8080" # Desktop GUI
+      - "${calibre_web_UI_port}:8081" # Webserver GUI
+    volumes:
+      - ${docker_dir}/calibre:/config:rw
+      - ${data_dir}:/data:rw
+      - ${data_dir}/media/books:/books:rw
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK_SET=002 #optional
+    labels:
+      - "traefik.http.routers.calibre.rule=Host(`${calibre_route}.${domain}`)"
+      - "traefik.enable=true"
+
+# Utilities 
+  # Watchtower - Automatic Update of Containers/Apps
+  watchtower:
+    container_name: watchtower
+    hostname: watchtower
+    restart: always
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      TZ: ${TZ}
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_REMOVE_VOLUMES: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "true"
+      WATCHTOWER_NO_STARTUP_MESSAGE: "false"
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *" # Everyday at 4 am
+      WATCHTOWER_NOTIFICATIONS_LEVEL: info
+  
+  # Consolidated log viewer
+  dozzle:
+    image: amir20/dozzle
+    container_name: dozzle
+    hostname: dozzle
+    volumes: 
+      - ${docker_dir}/dozzle:/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - t2_proxy
+    restart: always
+    ports: 
+      - target: 8080
+        published: ${dozzle_port}
+    labels: 
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`${dozzle_route}.{domain}`)"
+  
+  #Portainer - WebUI for Containers
+  portainer:
+    image: portainer/portainer:latest
+    hostname: portainer
+    container_name: portainer
+    restart: always
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - target: 9000
+        published: ${portainer_port}
+        protocol: tcp
+        mode: host
+    networks:
+      - t2_proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${docker_dir}/portainer/data:/data
+      - ${docker_dir}/shared:/shared
+    environment:
+      - TZ=${TZ}
+    labels: 
+      - "traefik.http.routers.portainer.rule=Host(`${portainers_route}.${domain}`)"
+      - "traefik.enable=true"
+
+  heimdall:
+    image: linuxserver/heimdall
+    hostname: heimdall
+    container_name: heimdall
+    restart: always
+    environment: 
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports: 
+      - target: 80
+        published: ${heimdall_port}
+        protocol: tcp
+        mode: host
+      - target: 4443
+        published: ${heimdall_encrypted_port}
+        protocol: tcp
+        mode: host
+    volumes:  
+      - ${docker_dir}/heimdall:/config
+    labels:
+      - "traefik.http.routers.heimdall.rule=Host(`${heimdall_route}.${domain}`)" 
+      - "traefik.enable=true"
+  
+  cloudflare-companion:
+    image: tiredofit/traefik-cloudflare-companion
+    container_name: cloudflare_companion
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment: 
+      - TRAEFIK_VERSION=2
+      - CF_EMAIL_FILE=/run/secrets/cloudflare_email
+      - CF_TOKEN_FILE=/run/secrets/cloudflare_api_key
+      - TARGET_DOMAIN=${DOMAINNAME}
+      - DOMAIN1_ZONE_ID_FILE=/run/secrets/cloudflare_zone_id
+      - DOMAIN1=${DOMAINNAME}
+    restart: always
+    secrets:
+      - cloudflare_zone_id
+      - cloudflare_email
+      - cloudflare_api_key
+
+  reverse-proxy:
+    # The official v2.0 Traefik docker image
+    image: traefik:latest
+    container_name: traefik
+    # Enables the web UI and tells Traefik to listen to docker
+    command: 
+      - --configfile=/traefik.yml
+    ports:
+      # The HTTP port
+      - target: 80
+        published: ${traefik_port}
+        protocol: tcp
+        mode: host
+      # The Web UI (enabled by --api.insecure=true)
+      - target: 8080
+        published: ${traefik_webUI_port}
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: ${traefik_encrypted_port}
+        protocol: tcp
+        mode: host
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${docker_dir}/traefik/rules:/rules
+      - ${docker_dir}/traefik/acme/acme.json:/acme.json
+      - ${docker_dir}/traefik/traefik.yml:/traefik.yml
+      - ${docker_dir}/traefik/traefik.access.log:/traefik.access.log
+      - ${docker_dir}/traefik/traefik.event.log:/traefik.event.log
+      - ${root}/secrets/traefik/.htpasswd:/.htpasswd
+    networks:
+      - t2_proxy
+    environment: 
+      - CF_API_EMAIL_FILE=/run/secrets/cloudflare_email
+      - CF_API_KEY_FILE=/run/secrets/cloudflare_api_key
+    secrets:
+      - cloudflare_email
+      - cloudflare_api_key
+
+secrets:
+  cloudflare_email:
+    file: ${root}/secrets/cloudflare/cloudflare_email
+  cloudflare_api_key:
+    file: ${root}/secrets/cloudflare/cloudflare_api_key
+  cloudflare_zone_id:
+    file: ${root}/secrets/cloudflare/cloudflare_zone_id

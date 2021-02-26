@@ -1,5 +1,12 @@
 version: "3.8"
 
+networks: 
+  t2_proxy:
+    external:
+      name: t2_proxy
+  default:
+    driver: bridge
+
 services:
 # Indexers
   # Radarr – Movie Download and Management
@@ -16,11 +23,12 @@ services:
       - target: 7878 # Unencrypted
         published: ${radarr_port}
         protocol: tcp
-        mode: host
+   
       - target: 9899 # Encrypted
         published: ${radarr_encrypted_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy
     restart: always
     environment:
       - PUID=${PUID}
@@ -29,7 +37,10 @@ services:
       - TZ=${TZ}
     labels: 
       - "traefik.http.routers.radarr.rule=Host(`${radarr_route}.${domain}`)"
-
+      - "traefik.http.services.sabnzbd.loadbalancer.server.port=7878"
+       # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+     
   # Sonarr – TV Show Download and Management
   sonarr:
     image: "hotio/sonarr:nightly"
@@ -44,11 +55,11 @@ services:
       - target: 8989 # Unencrypted
         published: ${sonarr_port}
         protocol: tcp
-        mode: host
       - target: 9898 # Encrypted
         published: ${sonarr_encrypted_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy
     restart: always
     environment:
       - PUID=${PUID}
@@ -57,7 +68,10 @@ services:
       - TZ=${TZ}
     labels: 
       - "traefik.http.routers.sonarr.rule=Host(`${sonarr_route}.${domain}`)"
-  
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+       # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+
   # Books DOwnload and Management
   lazylibrarian:
     image: linuxserver/lazylibrarian
@@ -76,11 +90,15 @@ services:
       - target: 5299
         published: ${lazylibrarian_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy
     restart: always
     labels: 
+      - "traefik.http.services.lazylibrarian.loadbalancer.server.port=5299"
       - "traefik.http.routers.lazylibrarian.rule=Host(`${lazylibrarian_route}.${domain}`)"
-  
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+     
   # Jackett – Torrent Proxy
   jackett:
     image: "linuxserver/jackett:latest"
@@ -93,20 +111,23 @@ services:
       - target: 9117 # Unencrypted
         published: ${jackett_port}
         protocol: tcp
-        mode: host
       - target: 9118 # Encrypted
         published: ${jackett_encrypted_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy
     restart: always
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
-    labels: 
+    labels:
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
       - "traefik.http.routers.jackett.rule=Host(`${jackett_route}.${domain}`)"
-  
-  # NZBHydra - NZB Meta Search
+      - "traefik.http.services.jackett.loadbalancer.server.port=9117"
+   
+  # NZBHydra - NZB Meta Search  
   hydra:
     image: linuxserver/hydra
     container_name: hydra
@@ -118,42 +139,48 @@ services:
       - target: 5075
         published: ${hydra_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy
     restart: always
     environment: 
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
     labels:
-      - "traefik.http.routers.hydra.rule=Host(`${hydra_route}.${domain}`)"
-      
+      - "traefik.http.services.hydra.loadbalancer.server.port=5075"
+      - "traefik.http.routers.hydra.rule=Host(`${hydra_route}.${domain}`)" # (`${DOMAINNAME}`) # && Path(`${hydra_route}`)"
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+
 # Download Clients
-  # NZBGet - UseNet setup
-  nzbget:
-    image: linuxserver/nzbget:latest
-    hostname: "nzbget"
-    container_name: "nzbget"
-    ports:
-      - target: 6789 # Unencrypted
-        published: ${nzbget_port}
-        protocol: tcp
-        mode: host
-      - target: 6791 # ENcrypted
-        published: ${nzbget_encrypted_port}
-        protocol: tcp
-        mode: host
-    volumes:
-      - ${data_dir}/usenet:/data
-      - ${docker_dir}/nzbget:/config
+  # UseNet setup
+  sab: 
+    image: linuxserver/sabnzbd
+    hostname: sabnzbd
+    container_name: sabnzbd
     restart: always
+    volumes: 
+      - ${docker_dir}/sabnzbd:/config
+      - ${data_dir}/usenet:/data
     environment: 
       - PUID=${PUID}
       - PGID=${PGID}
-      - UMASK=002
       - TZ=${TZ}
+    ports:
+      - target: 8080
+        published: ${sabnzbd_port}
+        protocol: tcp
+      - target: 9090
+        published: 9090
+        protocol: tcp
+    networks: 
+      - t2_proxy
     labels: 
-      - "traefik.http.routers.nzbget.rule=Host(`${nzbget_route}.${domain}`)"
-
+      - "traefik.http.routers.sabnzbd.rule=Host(`${sabnzbd_route}.${domain}`)"
+      - "traefik.http.services.sabnzbd.loadbalancer.server.port=8080"
+       # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+     
   # Transmission with VPN – Bittorrent Downloader
   transmission-vpn:
     container_name: transmission-vpn
@@ -204,42 +231,37 @@ services:
       - TRANSMISSION_DOWNLOAD_DIR=/data/completed
     labels: 
       - "traefik.http.routers.transmission.rule=Host(`${transmission_route}.${domain}`)"
-
+      # - "traefik.http.services.transmission.loadbalancer.server.port=9091"
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+     
 # Media Servers
-  # Plex Media Server
-  plexms:
-    container_name: plexms
-    hostname: plexms
+  # JellyFin - Media server
+  jelly:
+    image: linuxserver/jellyfin
+    container_name: jelly
+    hostname: jelly
     restart: always
-    image: hotio/plex
-    volumes:
-      - ${docker_dir}/plexms:/config
-      - ${data_dir}/plex_tmp:/transcode
-      - ${data_dir}/media/tvshows:/tv
-      - ${data_dir}/media/movies:/movies
-      - ${docker_dir}/shared:/shared
-    ports:
-      - "32400:32400/tcp"
-      - "32401:32401/tcp"
-      - "3005:3005/tcp"
-      - "8324:8324/tcp"
-      - "32469:32469/tcp"
-      - "1900:1900/udp"
-      - "32410:32410/udp"
-      - "32412:32412/udp"
-      - "32413:32413/udp"
-      - "32414:32414/udp"
-    environment:
+    environment: 
+      - PGID=${PGID}
+      - PUID=${PUID}
       - TZ=${TZ}
-      - UMASK=002
-      - HOSTNAME="Docker Plex"
-      - PLEX_CLAIM="PsShgz9aj-V9NjHY3srZ"
-      - PLEX_UID=${PUID}
-      - PLEX_GID=${PGID}
-      - ADVERTISE_IP="http://192.168.86.100:32400/,https://192.168.86.100:32401"
+      - JELLYFIN_PublishedServerUrl=192.168.0.5 #optional
+    volumes:
+      - ${docker_dir}/jelly/config:/config
+      - ${data_dir}/media/tvshows:/data/tvshows
+      - ${data_dir}/media/movies:/data/movies
+    ports:
+      - target: 8096
+        published: ${jelly_port}
+        protocol: tcp
+    networks: 
+      - t2_proxy
     labels: 
-      - "traefik.http.routers.plexms.rule=Host(`${plex_route}.${domain}`)"
-
+      - "traefik.http.routers.jelly.rule=Host(`${jelly_route}.${domain}`)"
+      - "traefik.services.routers.jelly.loadbalancer.server.port=8096"
+      - "traefik.enable=true"
+     
   # Calibre  – Ebooks and Management (Server)
   calibre:
     image: linuxserver/calibre
@@ -249,6 +271,8 @@ services:
     ports:
       - "${calibre_desktop_port}:8080" # Desktop GUI
       - "${calibre_web_UI_port}:8081" # Webserver GUI
+    networks: 
+      - t2_proxy
     volumes:
       - ${docker_dir}/calibre:/config:rw
       - ${data_dir}:/data:rw
@@ -259,7 +283,10 @@ services:
       - TZ=${TZ}
       - UMASK_SET=002 #optional
     labels:
-      - "traefik.http.routers.calibre.rule=Host(`calibre_route.${domain}`)"
+      - "traefik.http.routers.calibre.rule=Host(`${calibre_route}.${domain}`)"
+      - "traefik.services.routers.calibre.loadbalancer.server.port=8080"
+      - "traefik.enable=true"
+      #- "traefik.http.routers.calibre.tls=true"
 
 # Utilities 
   # Watchtower - Automatic Update of Containers/Apps
@@ -267,7 +294,7 @@ services:
     container_name: watchtower
     hostname: watchtower
     restart: always
-    image: v2tec/watchtower:latest
+    image: containrrr/watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -277,10 +304,9 @@ services:
       WATCHTOWER_INCLUDE_STOPPED: "true"
       WATCHTOWER_NO_STARTUP_MESSAGE: "false"
       WATCHTOWER_SCHEDULE: "0 0 4 * * *" # Everyday at 4 am
-      WATCHTOWER_NOTIFICATIONS_LEVEL: info
-      DOCKER_HOST: tcp://socket-proxy:2375
-      DOCKER_API_VERSION: "1.40"
-  
+      WATCHTOWER_NOTIFICATIONS_LEVEL: debug
+      # DOCKER_HOST: tcp://socket-proxy:2375
+    
   #Portainer - WebUI for Containers
   portainer:
     image: portainer/portainer:latest
@@ -292,15 +318,23 @@ services:
       - target: 9000
         published: ${portainer_port}
         protocol: tcp
-        mode: host
+      - target: 8000
+        published: ${portainer_encrypted_port}
+        protocol: tcp
+    networks: 
+      - t2_proxy 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${docker_dir}/portainer/data:/data
       - ${docker_dir}/shared:/shared
     environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
       - TZ=${TZ}
     labels: 
-      - "traefik.http.routers.portainer.rule=Host(`${portainers_route}.${domain}`)"
+      - "traefik.eanble=true"
+      - "traefik.http.routers.portainer.rule=Host(`${portainers_route}.${domain}`)" # (`${DOMAINNAME}`) && Path(`/${portainers_route}.`)"
+      - "traefik.http.services.portainers.loadbalancer.server.port=9000"
   
   heimdall:
     image: linuxserver/heimdall
@@ -315,55 +349,75 @@ services:
       - target: 80
         published: ${heimdall_port}
         protocol: tcp
-        mode: host
       - target: 4443
         published: ${heimdall_encrypted_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy 
     volumes:  
       - ${docker_dir}/heimdall:/config
     labels:
-      - "traefik.http.routers.heimdall.rule=Host(`${heimdall_route}.${domain}`)" 
-  
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+      # The domain the service will respond to
+      - "traefik.http.routers.heimdall.rule=Host(`${heimdall_route}.${domain}`)" # (`${DOMAINNAME}`) && Path(`${heimdall_route}`)" 
+      # - "traefik.tlsenabled=true"
+      - "traefik.http.services.heimdall.loadbalancer.server.port=80"
+    
+  dozzle:
+    container_name: dozzle
+    hostname: dozzle
+    image: amir20/dozzle:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - target: 8080
+        published: ${dozzle_port}
+        protocol: tcp
+    networks: 
+      - t2_proxy 
+    labels:
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+      # The domain the service will respond to
+      - "traefik.http.routers.dozzle.rule=Host(`${dozzle_route}.${domain}`)" # (`${DOMAINNAME}`) && Path(`${heimdall_route}`)" 
+      # - "traefik.tlsenabled=true"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=${dozzle_port}"
+
   reverse-proxy:
     # The official v2.0 Traefik docker image
     image: traefik:v2.4
     container_name: traefik
     # Enables the web UI and tells Traefik to listen to docker
-    command: --api.insecure=true --providers.docker
+    command: 
+     - "--configFile=/traefik.yml"
     ports:
       # The HTTP port
       - target: 80
         published: ${traefik_port}
         protocol: tcp
-        mode: host
+      # HTTPS port
+      - target: 443
+        published: ${traefik_encrypted_port}
+        protocol: tcp
+   
       # The Web UI (enabled by --api.insecure=true)
       - target: 8080
         published: ${traefik_webUI_port}
         protocol: tcp
-        mode: host
+    networks: 
+      - t2_proxy 
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
-
-  # # Organizer - Unified HTPC/Home Server Web Interface
-  organizr:
-    container_name: organizr
-    hostname: organizr
-    image: organizr/organizr:latest
-    restart: always
-    ports:
-      - target: 80
-        published: ${organizr_port}
-        protocol: tcp
-        mode: host
-    volumes:
-      - ${docker_dir}/organizr:/config
+      - ${docker_dir}/traefik2/traefik.access.log:/traefik.access.log
+      - ${docker_dir}/traefik2/traefik.event.log:/traefik.event.log
+      - ${docker_dir}/shared:/shared
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    labels: 
-      - "traefik.http.routers.organizr.rule=Host(`${organizr_route}.${domain}`)" 
-
-  
+      - CF_API_EMAIL_FILE=${CLOUDFLARE_EMAIL}
+      - CF_API_KEY_FILE=${CLOUDFLARE_API_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`${traefik_route}.${domain}`)"
+      # Path Based
+      # - "traefik.http.routers.traefik.rule=Host(`${DOMAINNAME}`) && Path(`/${traefik_route}`)"

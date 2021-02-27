@@ -43,11 +43,30 @@ entryPoints:
         - 131.0.72.0/22
   traefik:
     address: ":8080"
-
-file:
-  watch: true
-  directory: "/rules"
-  debugLogGeneratedTemplate: true
+  sonarr:
+    address: :8989
+  radarr:
+    address: :7878
+  lazylibrarian:
+    address: :5299
+  jackett: 
+    address: :9117
+  nzbget:
+    address: :6789
+  jelly:
+    address: :8096
+  dozzle: 
+    address: :9999
+  portainer: 
+    address: :9000
+  heimdall:
+    address: :81
+  calibre:
+    address: :38080
+  hydra:
+    address: :5075
+  dozzle:
+    address: :8081
 
 global:
   checknewversion: true
@@ -77,21 +96,58 @@ http:
     
   routers:
     api:
-      rule: Host(`traefik.docker.localhost`)
+      rule: Host(`${traefik_route}.${domain}`)
       entrypoints:
         - traefik
         - web
       services: api@internal
-    #   middlewares: auth
-    # http-catchall:
-    #   entrypoints: web
-    #   rule: HostRegexp(`{host:.+})
-    #   middlewares: redirect-to-https
-        
+    sonarr:
+      rule: Host(`${sonarr_route}.${domain}`)    
+      entryPoints:
+        - sonarr
+      services: sonarr
+    radarr:
+      rule: Host(`${radarr_route}.${domain}`)
+      entryPoints:
+        - radarr
+    lazylibrarian:
+      rule: Host(`${lazylibrarian_route}.${domain}`)
+      entryPoints: lazylibrarian
+    jackett:
+      rule: Host(`${jackett_route}.${domain}`)
+      entryPoints: jackett
+    nzbget:
+      rule: Host(`${nzbget_route}.${domain}`)
+      entryPoints: nzbget
+    jelly: 
+      rule: Host(`${jellyfin_route}.${domain}`)
+    dozzle:
+      rule: Host(`${dozzle_route}.{domain}`)
+      entryPoints: dozzle
+    portainer:
+      rule: Host(`${portainers_route}.${domain}`)
+      entrypoints: portainer
+    heimdall:
+      rule: rule=Host(`${heimdall_route}.${domain}`)
+      entrypoints: heimdall
+    calibre:
+      rule: Host(`${calibre_route}.${domain}`)
+      entrypoints: calibre
+    hydra:
+      rule: Host(`${hydra_route}.${domain}`)
+      entrypoints: hydra
+    dozzle: 
+      rule: Host(`${dozzle_route}.${domain}`)
+      entryPoints: dozzle
+
 providers:
   docker:
     exposedByDefault: false
     swarmMode: false
+  file:
+    watch: true
+    directory: "/rules"
+    debugLogGeneratedTemplate: true
 
 serversTransport:
   insecureSkipVerify: true

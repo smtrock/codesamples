@@ -37,12 +37,6 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    labels: 
-      #- "traefik.http.routers.radarr.rule=Host(`${DOMAINNAME}`) && Path(`/${radarr_route}`)" 
-      - "traefik.http.routers.radarr.rule=Host(`${radarr_route}.${domain}`)"
-      - "traefik.enable=true"
-      # - "traefik.http.routers.radar.tls.certresolver=dns-cloudflare"
-      # - "traefik.http.routers.radarr.entrypoints=web"
   
   # Sonarr – TV Show Download and Management
   sonarr:
@@ -71,9 +65,6 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    labels: 
-      - "traefik.http.routers.sonarr.rule=Host(`${sonarr_route}.${domain}`)"
-      - "traefik.enable=true"
   
   # Books DOwnload and Management
   lazylibrarian:
@@ -95,9 +86,6 @@ services:
         protocol: tcp
         mode: host
     restart: always
-    labels: 
-      - "traefik.http.routers.lazylibrarian.rule=Host(`${lazylibrarian_route}.${domain}`)"
-      - "traefik.enable=true"
 
   # Jackett – Torrent Proxy
   jackett:
@@ -121,9 +109,6 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
-    labels: 
-      - "traefik.http.routers.jackett.rule=Host(`${jackett_route}.${domain}`)"
-      - "traefik.enable=true"
 
   # NZBHydra - NZB Meta Search
   hydra:
@@ -147,9 +132,6 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
-    labels:
-      - "traefik.http.routers.hydra.rule=Host(`${hydra_route}.${domain}`)"
-      - "traefik.enable=true"
 
 # Download Clients
   # NZBGet - UseNet setup
@@ -177,9 +159,6 @@ services:
       - PGID=${PGID}
       - UMASK=002
       - TZ=${TZ}
-    labels: 
-      - "traefik.http.routers.nzbget.rule=Host(`${nzbget_route}.${domain}`)"
-      - "traefik.enable=true"
 
 # Media Servers
   jellyfin:
@@ -201,10 +180,7 @@ services:
     restart: always
     networks:
       - t2_proxy
-    labels: 
-      - "traefik.http.routers.jellyfin.rule=Host(`${jellyfin_route}.${domain}`)"
-      - "traefik.enable=true"
-
+ 
   # Calibre  – Ebooks and Management (Server)
   calibre:
     image: linuxserver/calibre
@@ -223,9 +199,6 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
       - UMASK_SET=002 #optional
-    labels:
-      - "traefik.http.routers.calibre.rule=Host(`${calibre_route}.${domain}`)"
-      - "traefik.enable=true"
 
 # Utilities 
   # Watchtower - Automatic Update of Containers/Apps
@@ -259,9 +232,6 @@ services:
     ports: 
       - target: 8080
         published: ${dozzle_port}
-    labels: 
-      - "traefik.enable=true"
-      - "traefik.http.routers.dozzle.rule=Host(`${dozzle_route}.{domain}`)"
   
   #Portainer - WebUI for Containers
   portainer:
@@ -283,9 +253,6 @@ services:
       - ${docker_dir}/shared:/shared
     environment:
       - TZ=${TZ}
-    labels: 
-      - "traefik.http.routers.portainer.rule=Host(`${portainers_route}.${domain}`)"
-      - "traefik.enable=true"
 
   heimdall:
     image: linuxserver/heimdall
@@ -307,9 +274,6 @@ services:
         mode: host
     volumes:  
       - ${docker_dir}/heimdall:/config
-    labels:
-      - "traefik.http.routers.heimdall.rule=Host(`${heimdall_route}.${domain}`)" 
-      - "traefik.enable=true"
   
   cloudflare-companion:
     image: tiredofit/traefik-cloudflare-companion

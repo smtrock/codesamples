@@ -3,9 +3,6 @@ api:
   debug: true
   insecure: true
 
-pilot:
-  token: a0d69f6b-eac9-4178-99fb-5374988e653b
-
 certificateResolvers:
   dns-cloudflare:
     acme:

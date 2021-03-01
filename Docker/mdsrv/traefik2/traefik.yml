@@ -1,13 +1,13 @@
 api:
   dashboard: true
   insecure: true
-  debug: true
-
+  
 certificateResolvers:
-  dns-cloudflare:
+  cloudflare-resolver:
     acme:
       email: smrtrock@outlook.com
       storage: acme.json
+      # LetsEncrypt Staging Server - uncomment when testing
       caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       dnschallenge:
         provider: cloudflare
@@ -37,13 +37,17 @@ entryPoints:
         - 104.16.0.0/12
         - 172.64.0.0/13
         - 131.0.72.0/22
+    http:
+      middlewares:
+        - chain-basic-auth
+      tls:
+        certResolver: cloudflare-resolver
+        domains:
+          - main: smrtrock.com
+            sans:
+              - "*.smrtrock.com"
   traefik:
     address: ":8080"
-
-file:
-  watch: true
-  directory: "/rules"
-  debugLogGeneratedTemplate: true
 
 global:
   checknewversion: true
@@ -51,10 +55,12 @@ global:
 
 log:
   level: DEBUG
-  filepath: traefik.event.log
+  # filepath: /traefik.event.log
+  format: json
 
 accesslog:
-  filepath: traefik.access.log
+  filepath: /traefik.access.log
+  format: json
   bufferingsize: 100
   filters:
     statusCodes: 400-599
@@ -63,3 +69,9 @@ providers:
   docker:
     exposedByDefault: false
     swarmMode: false
+  file:
+    watch: true
+    directory: "/rules"
+    
+serversTransport:
+  insecureSkipVerify: true

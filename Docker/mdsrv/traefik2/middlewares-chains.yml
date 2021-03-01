@@ -1,0 +1,28 @@
+http:
+  middlewares:
+    chain-no-auth:
+      chain:
+        middlewares:
+          - set-rate-limit
+          - secure-headers
+
+    chain-basic-auth:
+      chain:
+        middlewares:
+          - set-rate-limit
+          - secure-headers
+          - basic-auth
+
+    chain-oauth:
+      chain:
+        middlewares:
+          - set-rate-limit
+          - secure-headers
+          - forwardAuth-oauth
+        
+    chain-authelia:
+      chain:
+        middlewares:
+          - set-rate-limit
+          - secure-headers
+          - forwardAuth-authelia

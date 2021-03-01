@@ -1,0 +1,8 @@
+http:
+  routers:
+    traefik:
+      entryPoints: web
+      rule: "Host(`traefik.docker.localhost`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      service: api@internal
+      middlewares:
+        - basic-auth@file

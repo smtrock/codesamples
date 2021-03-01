@@ -1,0 +1,15 @@
+http:
+  routers:
+    pihole-rtr:
+      rule: "HostHeader(`pihole.docker.localhost`)" 
+      entryPoints:
+        - web
+      middlewares:
+        - pihole-add-admin
+      service: pihole-svc
+      
+  services:
+    pihole-svc:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.30:80"  # or whatever your external host's IP:port is 

@@ -156,10 +156,36 @@ services:
     labels: 
       - traefik.enable=true
       - traefik.docker.network=t2_proxy
-      - traefik.http.routers.calibre.rule=Host(`calibre.${domain}`)
+      - traefik.http.routers.calibre.rule=Host(`read.${domain}`)
       - traefik.http.routers.calibre.entryPoints=web
       - traefik.http.routers.calibre.service=calibre
       - traefik.http.services.calibre.loadbalancer.server.port=8080
+
+  plex:
+    image: linuxserver/plex
+    container_name: plex
+    hostname: plex
+    depends_on: 
+      - reverse-proxy
+    networks:
+      - t2_proxy
+    environment: 
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VERSION=docker
+      - PLEX_CLAIM=claim-XuUyxZrxfu7qYfsxsxZ4
+    volumes: 
+      - ${data_dir}\media:/media
+      - ${docker_dir}\plex:/config
+    restart: always
+    labels: 
+      - traefik.enable=true
+      - traefik.docker.network=t2_proxy
+      - traefik.http.routers.plex.entrypoints=web
+      - "traefik.http.routers.plex.tls=false"
+      - traefik.http.routers.plex.rule=Host(`plex.${domain}`)
+      - traefik.http.routers.plex.service=plex
+      - traefik.http.services.plex.loadbalancer.server.port=32400
 
  # Utilities 
   #Portainer - WebUI for Containers
@@ -183,7 +209,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=t2_proxy
       - traefik.http.routers.portainer.entryPoints=web
-      - traefik.http.routers.portainer.rule=Host(`portainer.${domain}`)
+      - traefik.http.routers.portainer.rule=Host(`infra.${domain}`)
       - traefik.http.routers.portainer.service=portainer
       - traefik.http.services.portainer.loadbalancer.server.port=9000
 
@@ -200,7 +226,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=t2_proxy
       - traefik.http.routers.dozzle.entryPoints=web
-      - traefik.http.routers.dozzle.rule=Host(`dozzel.${domain}`)
+      - traefik.http.routers.dozzle.rule=Host(`logs.${domain}`)
       - traefik.http.routers.dozzle.service=dozzle
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
   
@@ -222,7 +248,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=t2_proxy
       - traefik.http.routers.heimdall.entryPoints=web
-      - traefik.http.routers.heimdall.rule=Host(`heimdall.${domain}`)
+      - traefik.http.routers.heimdall.rule=Host(`home.${domain}`)
       - traefik.http.routers.heimdall.service=heimdall
       - traefik.http.services.heimdall.loadbalancer.server.port=80
 

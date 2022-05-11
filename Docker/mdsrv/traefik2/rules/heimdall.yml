@@ -1,0 +1,13 @@
+http:
+  routers:
+    heimdall:
+      entryPoints:
+      - web
+      service: heimdall
+      rule: Host(`home.lan`)
+      
+  services:
+    heimdall:
+      loadBalancer:
+        servers:
+        - url: http://home:80

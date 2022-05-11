@@ -1,0 +1,14 @@
+http:
+  routers:
+    readarr:
+      entryPoints:
+      - web
+      service: readarr
+      rule: PathPrefix(`/books`)
+      priority: 42
+      
+  services:
+    readarr:
+      loadBalancer:
+        servers:
+        - url: http://readarr:8787

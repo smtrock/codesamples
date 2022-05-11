@@ -1,0 +1,14 @@
+http:
+  routers:
+    hydra:
+      entryPoints:
+      - web
+      service: hydra
+      rule: Host(`hydra.home.lan`)
+      priority: 42
+      
+  services:
+    hydra:
+      loadBalancer:
+        servers:
+        - url: http://hydra:5076

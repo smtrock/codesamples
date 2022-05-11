@@ -1,0 +1,14 @@
+http:
+  routers:
+    radarr:
+      entryPoints:
+      - web
+      service: radarr
+      rule: PathPrefix(`/movies`)
+      priority: 42
+      
+  services:
+    radarr:
+      loadBalancer:
+        servers:
+        - url: http://movies:7878

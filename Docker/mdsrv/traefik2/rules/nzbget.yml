@@ -1,0 +1,14 @@
+http:
+  routers:
+    get:
+      entryPoints:
+      - web
+      service: get
+      rule: Host(`get.home.lan`)
+      priority: 42
+      
+  services:
+    get:
+      loadBalancer:
+        servers:
+        - url: http://get:6789

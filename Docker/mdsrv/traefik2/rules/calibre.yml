@@ -1,0 +1,14 @@
+http:
+  routers:
+    calibre:
+      entryPoints:
+      - web
+      service: calibre
+      rule: Host(`calibre.home.lan`)
+      priority: 42
+      
+  services:
+    calibre:
+      loadBalancer:
+        servers:
+        - url: http://calibre:8080

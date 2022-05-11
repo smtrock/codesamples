@@ -1,0 +1,14 @@
+http:
+  routers:
+    plex:
+      entryPoints:
+      - web
+      service: plex
+      rule: Host(`plex.home.lan`)
+      priority: 42
+      
+  services:
+    plex:
+      loadBalancer:
+        servers:
+        - url: http://plex:32400

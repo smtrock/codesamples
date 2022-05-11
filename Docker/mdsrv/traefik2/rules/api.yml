@@ -1,0 +1,18 @@
+http:
+  routers:
+    api:
+      rule: (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      service: api@internal
+      # tls:
+      #   certresolver: cf
+      entrypoints:
+        # - websecure
+         - web
+      # middlewares:
+      #   - https-redirect
+  
+  services:
+    api:
+      loadBalancer:
+        servers:
+        - url: http://proxy:8080

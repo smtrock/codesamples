@@ -1,0 +1,14 @@
+http:
+  routers:
+    pihole:
+      entryPoints:
+      - web
+      service: pihole
+      rule: Host(`pihole.home.lan`)
+      priority: 42
+      
+  services:
+    pihole:
+      loadBalancer:
+        servers:
+        - url: http://pihole:82

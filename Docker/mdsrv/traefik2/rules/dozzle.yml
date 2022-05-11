@@ -1,0 +1,14 @@
+http:
+  routers:
+    dozzle:
+      entryPoints:
+      - web
+      service: dozzle
+      rule: Host(`logs.home.lan`) # PathPrefix(`/logs`)
+      priority: 42
+      
+  services:
+    dozzle:
+      loadBalancer:
+        servers:
+        - url: http://dozzle:8080

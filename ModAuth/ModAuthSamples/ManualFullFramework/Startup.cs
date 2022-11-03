@@ -1,5 +1,4 @@
-﻿
-using Owin;
+﻿using Owin;
 
 namespace ManualFullFramework
 {

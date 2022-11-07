@@ -1,22 +1,27 @@
-﻿using Microsoft.Owin.Security;
-using Microsoft.Owin.Security.Cookies;
-using Microsoft.Owin.Security.OpenIdConnect;
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.IdentityModel.Tokens;
+using System.Linq;
+using Microsoft.IdentityModel.Tokens; 
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.ActiveDirectory;
 using Owin;
 
 namespace ManualFullFramework
 {
     public partial class Startup
     {
-        public  void ConfigureAuth(IAppBuilder app)
+        // For more information on configuring authentication, please visit https://go.microsoft.com/fwlink/?LinkId=301864
+        public void ConfigureAuth(IAppBuilder app)
         {
-            app.SetDefaultSignInAsAuthenticationType(
-                CookieAuthenticationDefaults.AuthenticationType);
-            app.UseCookieAuthentication(new CookieAuthenticationOptions());
-            app.UseOpenIdConnectAuthentication(
-                new OpenIdConnectAuthenticationOptions
+            app.UseWindowsAzureActiveDirectoryBearerAuthentication(
+                new WindowsAzureActiveDirectoryBearerAuthenticationOptions
                 {
-                    ClientId = "dfd129bf-063d-4d8e-96c1-5c209c111682",
-                    Authority = "https://login.microsoftonline.com/smrtrock.com"
+                    Tenant = ConfigurationManager.AppSettings["ida:TenantId"],
+                    TokenValidationParameters = new TokenValidationParameters {
+                         ValidAudience = ConfigurationManager.AppSettings["ida:Audience"]
+                    },
                 });
         }
     }
